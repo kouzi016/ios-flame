@@ -79,6 +79,10 @@ typedef void (*xnu_entry_t)(uint64_t boot_args_pa);
 const char *loader_boot(uintptr_t dtb)
 {
 	uint64_t rd_start, rd_end;
+	uint64_t mb[8], ms[8];
+	int nmem = fdt_memory(dtb, mb, ms, 8);
+	for (int i = 0; i < nmem; i++)
+		con_hex2("DDR MiB", "base=", mb[i] >> 20, "size=", ms[i] >> 20);
 
 	if (!fdt_chosen_u64(dtb, "linux,initrd-start", &rd_start) ||
 	    !fdt_chosen_u64(dtb, "linux,initrd-end", &rd_end))
@@ -102,11 +106,8 @@ const char *loader_boot(uintptr_t dtb)
 	 * /memory really covers it; overwriting a TZ/hyp carve-out resets
 	 * the phone with no message.
 	 */
-	uint64_t mb[8], ms[8];
-	int nmem = fdt_memory(dtb, mb, ms, 8);
 	int covered = 0;
 	for (int i = 0; i < nmem; i++) {
-		con_hex2("DDR MiB", "base=", mb[i] >> 20, "size=", ms[i] >> 20);
 		if (p->phys_base >= mb[i] && p->phys_base + p->mem_size <= mb[i] + ms[i])
 			covered = 1;
 	}

@@ -67,7 +67,14 @@ def main(path):
 
     # Only the --highmem range is booted on the phone; the low one is informational.
     for label, base, size in (('kernel RAM (--highmem)', mkadt.HIGH_PHYS_BASE, mkadt.HIGH_MEM_SIZE),):
-        inside = any(b <= base and base + size <= b + s for b, s in mem)
+        # DDR banks may be adjacent (0xc0000000+2G, 0x140000000+3G): walk them.
+        cur = base
+        while cur < base + size:
+            nxt = [b + s for b, s in mem if b <= cur < b + s]
+            if not nxt:
+                break
+            cur = max(nxt)
+        inside = cur >= base + size
         hits = [p.split('/')[-1] for p, b, s in reserved if b < base + size and base < b + s]
         check(label, inside and not hits,
               f'{base:#x}+{size:#x} ' + ('inside DDR' if inside else 'NOT inside DDR') +

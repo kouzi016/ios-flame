@@ -34,11 +34,20 @@ hdr=../dtb/boot_unpacked/header.txt
 osv=$(awk '/^os_version_str:/{print $2}' "$hdr")
 ospl=$(awk '/^os_patch_level:/{print $2}' "$hdr")
 [ -n "$osv" ] && [ -n "$ospl" ] || { echo "error: re-run tools/unpack_bootv2.py on the stock flame boot.img" >&2; exit 1; }
-mkbootimg --header_version 2 --kernel out/Image --ramdisk out/ramdisk.bin \
+# Pixel ABL (flame, 2026-10-21): only an LZ4 *frame* kernel is accepted (raw
+# or `lz4 -l` legacy -> "Unsupported"), and the Image header needs
+# text_offset 0x80000 (0 -> "Invalid Parameter"). Same as the stock kernel.
+lz4 -9 -f -q out/Image out/Image.lz4
+mkbootimg --header_version 2 --kernel out/Image.lz4 --ramdisk out/ramdisk.bin \
 	--dtb ../dtb/boot_unpacked/dtb --base 0 --kernel_offset 0x8000 --ramdisk_offset 0x1000000 \
 	--tags_offset 0x100 --dtb_offset 0x1f00000 --pagesize 4096 \
 	--os_version "$osv" --os_patch_level "$ospl" \
 	--cmdline "console=null" -o out/shim-boot.img
+# Stock boot.img has an AVB hash footer in a 64 MiB partition image; keep that
+# (no signature: algorithm NONE, like stock). tools/avbtool.py is AOSP's.
+python3 -I ../tools/avbtool.py add_hash_footer --image out/shim-boot.img --partition_size 67108864 \
+	--partition_name boot --algorithm NONE --prop com.android.build.boot.os_version:13 \
+	--prop com.android.build.boot.security_patch:2022-10-05
 # Host render of the console layout.
 gcc -O1 -Wall -o out/host_test console.c host_test.c && ./out/host_test
 ls -l out/Image out/shim-boot.img

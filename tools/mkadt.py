@@ -16,11 +16,13 @@ import adt  # noqa: E402
 # at 0xf9800000); 32MB-aligned inside that.
 PHYS_BASE = 0xae000000
 MEM_SIZE = 0x4a000000
-# --highmem (phone only): the upper DDR bank. GUESS for the 6 GB flame:
-# <0x80000000 2G>, <0x1_00000000 4G>, with no carve-out above 4G and the
-# dynamic pools limited below 4G. Same 3.95 GiB as sweet; the shim refuses
-# to boot when ABL's /memory does not cover it.
-HIGH_PHYS_BASE = 0x100000000
+# --highmem (phone only): the upper DDR. Measured on the Pixel 4 (G020N,
+# 2026-10-21, tools/flame-dump.sh): ABL's /memory has
+# <0x80000000 0x3cc00000>, <0xc0000000 2G>, <0x140000000 3G> and Linux sees
+# 0xc0000000-0x1ffffffff as one System RAM range (the first guess,
+# 0x1_00000000, was wrong). Same 3.95 GiB as sweet. The shim refuses to boot
+# when ABL's /memory does not cover it.
+HIGH_PHYS_BASE = 0xc0000000
 HIGH_MEM_SIZE = 0xfcc00000
 # /arm-io children are relative to this; it must not be 0 (serial_init bails)
 SOC_BASE = 0x01000000

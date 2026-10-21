@@ -102,14 +102,23 @@ const char *loader_boot(uintptr_t dtb)
 
 	/*
 	 * flame: the kernel RAM in mkadt.py is a guess from the public DTs
-	 * (6 GB, no carve-outs above 4 GiB). Refuse to boot unless ABL's
+	 * (0xc0000000 and up, measured; no carve-outs there). Refuse to boot unless ABL's
 	 * /memory really covers it; overwriting a TZ/hyp carve-out resets
 	 * the phone with no message.
 	 */
-	int covered = 0;
-	for (int i = 0; i < nmem; i++) {
-		if (p->phys_base >= mb[i] && p->phys_base + p->mem_size <= mb[i] + ms[i])
-			covered = 1;
+	/* DDR banks may be adjacent (0xc0000000+2G, 0x140000000+3G): walk them. */
+	uint64_t cur = p->phys_base, end = p->phys_base + p->mem_size;
+	int covered = 1;
+	while (cur < end) {
+		uint64_t next = 0;
+		for (int i = 0; i < nmem; i++)
+			if (cur >= mb[i] && cur < mb[i] + ms[i] && mb[i] + ms[i] > next)
+				next = mb[i] + ms[i];
+		if (!next) {
+			covered = 0;
+			break;
+		}
+		cur = next;
 	}
 	if (nmem && !covered)
 		return "kernel RAM not inside ABL /memory (fix mkadt.py)";

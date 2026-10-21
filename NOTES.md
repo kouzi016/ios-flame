@@ -30,6 +30,36 @@
   (shim/build.sh reads these). dtb section 1048284 bytes (first DTB
   525221 bytes; more than one DTB). Kernel LZ4, ramdisk gzip.
 
+## flame: first hardware results (2026-10-21 evening)
+- Observed: Pixel 4 ABL accepts `fastboot boot` of the stock boot.img, but
+  rejected every shim image until two things were fixed: the kernel must be
+  an LZ4 *frame* (`lz4 -9`, magic 04 22 4d 18; raw and `lz4 -l` legacy gave
+  "Unsupported") and the Image header text_offset must be 0x80000 (0 gave
+  "Invalid Parameter"). An AVB hash footer (algorithm NONE, 64 MiB) is kept
+  as on stock; whether it is required was not tested. shim/build.sh now does
+  all three (tools/avbtool.py is AOSP android13-release, fetched from
+  android.googlesource.com).
+- Observed: the accepted shim image (variant L2: shim built before the loader
+  change below) started: the screen changed, the top half showed noise, the
+  phone stopped answering on USB, and a forced power-off + Volume down gave
+  a normal fastboot screen again (display fine after that). No readable
+  diagnostic text yet. Guesses (unverified): stride/format of the scanout
+  buffer, or the command-mode panel refresh in shim/mdp.c.
+- Root: Magisk v30.7 (SHA-256 e0d32d21...9ebd5, matches GitHub digest) patched
+  the stock boot.img on the phone; `fastboot boot backup/magisk/patched.img`
+  (temporary, nothing flashed) gave `su` uid 0. backup/magisk/ is not in git.
+- tools/flame-dump.sh ran (dumps/20261021-233925/, not in git). dtc 1.8.1
+  aborts on live.dtb (propval_cell assertion); live.dts there is `fdtdump`
+  output, which flame-check.py parses fine.
+- flame-check found one MISMATCH: kernel RAM. Measured: ABL /memory =
+  <0x80000000 0x3cc00000>, <0xc0000000 2G>, <0x140000000 3G>; Linux iomem has
+  0xc0000000-0x1ffffffff as one System RAM. mkadt.py HIGH_PHYS_BASE changed
+  0x100000000 -> 0xc0000000 (size unchanged); shim/loader.c and
+  tools/flame-check.py now walk adjacent banks. All other checks OK (splash
+  0x9c400000, panel 1080x2280, GICD, UFS, PS_HOLD, IMEM, touch on SPI SE4).
+  The new RAM base has not been booted on hardware.
+- Not done: kernel CI build, IPSW, root image, touch driver, any userdata write.
+
 # iOS 16 on sweet (Redmi Note 10 Pro, SM7150) - working notes
 
 ## Agent handoff / active work (2026-10-15, latest)

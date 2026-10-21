@@ -67,7 +67,19 @@
   entries; boot_a lba 0x2208, boot_b 0x6208, modem_a 0xA208, modem_b
   0x10208, super 0x18000 (0x2458 MiB), userdata 0x25E000 (0xC80F MiB, fs
   "other"). Ramdisk (empty cpio) at 0x84700000. FLAME.md step 3-1 passed.
-- Not done: kernel CI build, IPSW, root image, touch driver, any userdata write.
+- XNU BOOTS ON THE PIXEL 4 (2026-10-22, photo). CI run 39620247252 (branch
+  flame, success, ~7 min) -> xnu/out/kernel.development.sweet, SHA-256
+  fcb9966b4a8e0d5d94a9fa8add8799740c635dd0b1a8b97e60779aee8187f7fd. ADT from
+  `mkadt.py --highmem` (no /product node: research/ipsw-x/d22ap.adt missing),
+  cmdline `cpus=1 sweetkeys=0 rd=ufsroot0`, no ufsrw/rootrw; `fastboot boot`
+  of the 64 MiB image (nothing flashed). The kernel ran from RAM at
+  0xc0000000+ without a reset, printed its console, and loops on
+  `BSD root: ufsroot0, major 1, minor 0` -> `hfs_ValidateHFSPlusVolumeHeader:
+  unknown Volume Signature : 134e` -> `cannot mount root, errno = 19`
+  (mount(9)..mount(16)...). That is expected: userdata still holds Android,
+  not an HFS+ iOS root. Not seen yet: the early UFS lines at the top of the
+  log (scrolled off). Bottom edge shows colored bars (unexplained).
+- Not done: IPSW, root image, touch driver, any userdata write.
 
 # iOS 16 on sweet (Redmi Note 10 Pro, SM7150) - working notes
 

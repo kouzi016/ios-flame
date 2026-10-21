@@ -1,3 +1,17 @@
+# flame (Pixel 4) handoff, 2026-10-21
+
+- Branch `flame` of ios-sweet. Board values from Google's public
+  android-msm-coral-4.14-android13 DTs and sm8150-mainline; NOT yet checked
+  on a phone (the user's Japanese Pixel 4 is still bootloader-locked).
+- Changed: shim FB 0x9c400000 1080x2280, IMEM 0x146bf65c, MDP autorefresh
+  check (shim/mdp.c, command-mode panel), /memory coverage check in the
+  loader; mkadt.py flame RAM/FB/CPUs; xnu/patches/0082-flame-board.patch
+  (early console, HID 2280, keys PM8150 GPIO6, sweet touch and USB off).
+- Not built yet: no CI run of the kernel, shim compiled only with clang
+  -fsyntax checks (no aarch64-linux-gnu-gcc here).
+- Next: unlock, tools/flame-dump.sh, tools/flame-check.py, stage 1 of
+  FLAME.md (shim alone). Then FTM5 SPI touch driver.
+
 # iOS 16 on sweet (Redmi Note 10 Pro, SM7150) - working notes
 
 ## Agent handoff / active work (2026-10-15, latest)

@@ -1,5 +1,6 @@
 # device dumps: persist/modemst/fsg hold IMEI + calibration; live DT holds the serial
 backup/
+dumps/
 dtb/
 recovery/
 # third-party/Apple sources fetched for reading

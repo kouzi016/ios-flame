@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """Build the minimal Apple Device Tree that the SWEET xnu needs to boot.
 
-Only what the early boot path actually reads (see NOTES.md); every MMIO
-address comes from the sweet live FDT. Usage:  mkadt.py OUT.adt [--dump] [--qemu] [--highmem]
+Only what the early boot path actually reads (see NOTES.md). flame (Pixel 4)
+values come from Google's android-msm-coral-4.14 device trees (sm8150*.dtsi,
+google/sm8150-floral-*.dtsi); check them against a live FDT dump
+(tools/flame-dump.sh, FLAME.md) before trusting them. Usage:  mkadt.py OUT.adt [--dump] [--qemu] [--highmem]
 """
 import hashlib, os, struct, sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import adt  # noqa: E402
 
-# Kernel-managed RAM: above every Qualcomm XPU carve-out (see NOTES.md)
-PHYS_BASE = 0xb0000000
-MEM_SIZE = 0x4d000000
-# --highmem (phone only): the whole upper DDR bank. The live FDT memory node is
-# <0x80000000 2G>, <0x1_00000000 0xfcc00000>; every fixed reserved-memory
-# carve-out is in the low bank and the dynamic pools are limited below 4G.
+# Kernel-managed RAM below 4G: flame's floral-memory.dtsi leaves
+# 0xac800000-0xf97fffff free (faceauth_fw_b ends at 0xac800000, rmtfs starts
+# at 0xf9800000); 32MB-aligned inside that.
+PHYS_BASE = 0xae000000
+MEM_SIZE = 0x4a000000
+# --highmem (phone only): the upper DDR bank. GUESS for the 6 GB flame:
+# <0x80000000 2G>, <0x1_00000000 4G>, with no carve-out above 4G and the
+# dynamic pools limited below 4G. Same 3.95 GiB as sweet; the shim refuses
+# to boot when ABL's /memory does not cover it.
 HIGH_PHYS_BASE = 0x100000000
 HIGH_MEM_SIZE = 0xfcc00000
 # /arm-io children are relative to this; it must not be 0 (serial_init bails)
@@ -22,10 +27,11 @@ SOC_BASE = 0x01000000
 
 GICD, GICD_SIZE = 0x17a00000, 0x10000
 GICR, GICR_SIZE = 0x17a60000, 0x100000
-FB, FB_SIZE = 0x9c000000, 0x1700000
-SWEET_ECID = 0x5357454554000001  # 'SWEET' + 1, synthetic
-FB_W, FB_H, FB_STRIDE = 1080, 2400, 1080 * 4
-# Internal UFS host (ufshc@1d84000 "ufs_mem"); QEMU virt has none
+# flame cont_splash_region; ABL leaves the 1080x2280 a8r8g8b8 splash here
+FB, FB_SIZE = 0x9c400000, 0x2400000
+SWEET_ECID = 0x464c414d45000001  # 'FLAME' + 1, synthetic
+FB_W, FB_H, FB_STRIDE = 1080, 2280, 1080 * 4
+# Internal UFS host (ufshc@1d84000, same on sm8150); QEMU virt has none
 UFS, UFS_SIZE = 0x01d84000, 0x3000
 TIMEBASE = 19200000
 VTIMER_INTID = 19
@@ -82,8 +88,8 @@ def build(seed=None, qemu=False, highmem=False):
         ('dram-size', u64(mem_size)),
         ('random-seed', seed),
         ('debug-enabled', u32(1)),
-        ('firmware-version', cstr('sweet-shim')),
-        ('system-firmware-version', cstr('sweet-shim')),
+        ('firmware-version', cstr('flame-shim')),
+        ('system-firmware-version', cstr('flame-shim')),
         # iBoot's SHA-384 of the boot manifest; /sbin/mount -P 1 exits unless
         # it exists (bind mounts /private/preboot/<hex>/usr/standalone/firmware,
         # tolerating a missing directory). Fixed stand-in value.
@@ -93,8 +99,8 @@ def build(seed=None, qemu=False, highmem=False):
         ('crypto-hash-method', cstr('sha2-384')),
         # MobileGestalt's screen class: display-scale (u32, default 0) comes
         # from /chosen, the pixel size from IOMobileFramebuffer. Scale 0 makes
-        # SpringBoard's FBSDisplayMode "infxinf@0x" invalid. 1080x2400 @3x =
-        # 360x800 points (like iPhone X class devices).
+        # SpringBoard's FBSDisplayMode "infxinf@0x" invalid. 1080x2280 @3x =
+        # 360x760 points (like iPhone X class devices).
         ('display-scale', u32(3)),
         # XNU derives IOPlatformUUID (gethostuuid) from these on arm; without
         # them CFPreferences cannot use kCFPreferencesCurrentHost (no ByHost
@@ -119,15 +125,16 @@ def build(seed=None, qemu=False, highmem=False):
         # with CSR_ALLOW_UNRESTRICTED_FS (vm_unix.c shared region checks).
         node('asmb', [ph(), ('lp-sip0', u64(0x6f)), ('lp-sip1', u32(1))])])
 
-    # SWEET SMP: all eight cores in physical-core order (0-5 Cortex-A55,
-    # 6-7 Cortex-A76), one homogeneous cluster. The kernel defaults to one
+    # flame SMP: all eight cores in physical-core order (0-3 silver A55,
+    # 4-6 gold A76, 7 prime A76), one homogeneous cluster. The kernel defaults to one
     # and uses cpus=N to select an initial prefix (N <= 8).
-    # QEMU retains its original single-CPU tree: its MPIDRs differ from sweet.
+    # QEMU retains its original single-CPU tree: its MPIDRs differ from flame.
     cpu_nodes = []
     for core in range(1 if qemu else 8):
         cpu_nodes.append(node(f'cpu{core}', [
             ph(),
             ('device_type', cstr('cpu')),
+            # SweetCPU (KernelConfigTables) matches 'qcom,kryo470'; flame is a Kryo 485
             ('compatible', cstr('qcom,kryo470') + cstr('ARM,v8')),
             ('reg', u32(core << 8)),  # actual MPIDR Aff1:Aff0, NOT logical ID
             ('cpu-id', u32(core)),   # descriptive: XNU assigns IDs by DT order
@@ -139,7 +146,7 @@ def build(seed=None, qemu=False, highmem=False):
             ('l3-cache-id', u32(0)),     # shared L3
             ('state', cstr('running' if core == 0 else 'stopped')),
             ('timebase-frequency', u32(timebase)),
-            ('clock-frequency', u32(2304000000 if core >= 6 else 1804800000)),
+            ('clock-frequency', u32(2841600000 if core == 7 else 2419200000 if core >= 4 else 1785600000)),
             ('bus-frequency', u32(100000000)),
             ('memory-frequency', u32(1866000000)),
             ('peripheral-frequency', u32(timebase)),
@@ -217,7 +224,7 @@ def build(seed=None, qemu=False, highmem=False):
     # (iPhone10,3). 'xiaomi,sweet' stays for SweetPlatformExpert matching.
     return node('device-tree', [
         ph(),
-        ('compatible', cstr('D22AP') + cstr('iPhone10,3') + cstr('xiaomi,sweet') + cstr('qcom,sm7150') + cstr('AppleARM')),
+        ('compatible', cstr('D22AP') + cstr('iPhone10,3') + cstr('google,flame') + cstr('xiaomi,sweet') + cstr('qcom,sm8150') + cstr('AppleARM')),
         ('model', cstr('iPhone10,3')),
         ('target-type', cstr('D22')),
         ('target-sub-type', cstr('D22AP')),

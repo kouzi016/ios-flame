@@ -9,7 +9,11 @@ assert b[:8] == b'ANDROID!'
 cmd = b[64:64+512].split(b'\0')[0] + b[608:608+1024].split(b'\0')[0]
 info = dict(kernel_size=ks, kernel_addr=hex(ka), ramdisk_size=rs, ramdisk_addr=hex(ra),
             second_size=ss, tags_addr=hex(ta), page_size=ps, header_version=ver,
-            os_version=hex(osv), name=b[48:64].split(b'\0')[0].decode(), cmdline=cmd.decode())
+            os_version=hex(osv),
+            # bits 31..11: A.B.C (7 bits each); 10..4: year - 2000; 3..0: month
+            os_version_str='%d.%d.%d' % (osv >> 25, (osv >> 18) & 0x7f, (osv >> 11) & 0x7f),
+            os_patch_level='%04d-%02d' % (2000 + ((osv >> 4) & 0x7f), osv & 0xf),
+            name=b[48:64].split(b'\0')[0].decode(), cmdline=cmd.decode())
 rnd = lambda n: (n + ps - 1) // ps * ps
 off = ps
 parts = [('kernel', ks), ('ramdisk', rs), ('second', ss)]

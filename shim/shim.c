@@ -11,8 +11,9 @@
 #include "mmu.h"
 #include "loader.h"
 #include "ufs.h"
+#include "mdp.h"
 
-#define IMEM_RESTART_REASON	0x146aa65cUL	/* qcom,msm-imem restart_reason@65c */
+#define IMEM_RESTART_REASON	0x146bf65cUL	/* flame: qcom,msm-imem@146bf000 restart_reason@65c */
 #define RESTART_BOOTLOADER	0x77665500U
 #define PSHOLD			0x0c264000UL
 
@@ -373,11 +374,18 @@ static uint32_t to_us(uint64_t ticks)
 void shim_main(uint64_t dtb)
 {
 	struct mmu_info mi;
+	struct mdp_state md;
+
+	/* flame: command-mode panel; nothing drawn shows without autorefresh. */
+	stage = "mdp";
+	mdp_autorefresh(&md);
 
 	/* An xnu payload in the ramdisk means: boot it (MMU stays off). */
 	stage = "loader";
 	con_clear(RED);
-	con_str("SHIM", "sweet milestone 4: xnu loader");
+	con_str("SHIM", "flame milestone 4: xnu loader");
+	con_hex2("MDP AR", "pp0=", md.pp0, "pp1=", md.pp1);
+	con_hex2("MDP", "flush=", md.ctl0_flush, "kicked=", md.kicked);
 	con_skip();
 	const char *why = loader_boot(dtb);
 	con_str("LOADER", why);
@@ -405,7 +413,7 @@ void shim_main(uint64_t dtb)
 	if (rc)
 		con_clear(RED);
 
-	con_str("SHIM", "sweet milestone 3");
+	con_str("SHIM", "flame milestone 3");
 	con_skip();
 	con_hex2("DTB", "at=", dtb, "magic=", dtb ? __builtin_bswap32(rd32(dtb)) : 0);
 	con_hex2("IMAGE", "lo=", mi.img_lo, "hi=", mi.img_hi);

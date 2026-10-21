@@ -96,6 +96,23 @@ const char *loader_boot(uintptr_t dtb)
 	con_hex("VIRT", p->virt_base);
 	con_hex("ENTRY", p->entry_va);
 
+	/*
+	 * flame: the kernel RAM in mkadt.py is a guess from the public DTs
+	 * (6 GB, no carve-outs above 4 GiB). Refuse to boot unless ABL's
+	 * /memory really covers it; overwriting a TZ/hyp carve-out resets
+	 * the phone with no message.
+	 */
+	uint64_t mb[8], ms[8];
+	int nmem = fdt_memory(dtb, mb, ms, 8);
+	int covered = 0;
+	for (int i = 0; i < nmem; i++) {
+		con_hex2("DDR MiB", "base=", mb[i] >> 20, "size=", ms[i] >> 20);
+		if (p->phys_base >= mb[i] && p->phys_base + p->mem_size <= mb[i] + ms[i])
+			covered = 1;
+	}
+	if (nmem && !covered)
+		return "kernel RAM not inside ABL /memory (fix mkadt.py)";
+
 	/* The payload must not overlap where the kernel goes. */
 	if (rd_end > p->phys_base && rd_start < p->phys_base + p->mem_size)
 		return "ramdisk overlaps kernel memory";

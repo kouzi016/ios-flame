@@ -1,16 +1,34 @@
-# flame (Pixel 4) handoff, 2026-10-21
+# flame (Pixel 4) handoff, 2026-10-21 (updated 22:40)
 
 - Branch `flame` of ios-sweet. Board values from Google's public
-  android-msm-coral-4.14-android13 DTs and sm8150-mainline; NOT yet checked
-  on a phone (the user's Japanese Pixel 4 is still bootloader-locked).
+  android-msm-coral-4.14-android13 DTs and sm8150-mainline.
 - Changed: shim FB 0x9c400000 1080x2280, IMEM 0x146bf65c, MDP autorefresh
   check (shim/mdp.c, command-mode panel), /memory coverage check in the
   loader; mkadt.py flame RAM/FB/CPUs; xnu/patches/0082-flame-board.patch
   (early console, HID 2280, keys PM8150 GPIO6, sweet touch and USB off).
-- Not built yet: no CI run of the kernel, shim compiled only with clang
-  -fsyntax checks (no aarch64-linux-gnu-gcc here).
-- Next: unlock, tools/flame-dump.sh, tools/flame-check.py, stage 1 of
-  FLAME.md (shim alone). Then FTM5 SPI touch driver.
+- Not built yet: no CI run of the kernel; shim compiled with clang -c only
+  (no aarch64-linux-gnu-gcc here, not linked).
+
+## Phone (observed 2026-10-21, adb, no root)
+- Pixel 4 `flame`, SKU G020N (Japan), TP1A.221005.002.B2 (Android 13,
+  patch 2022-10-05), bootloader c2f2-0.5-8906123, current slot `_b`.
+- Bootloader UNLOCKED 2026-10-21 (`fastboot flashing unlock`, user
+  confirmed on the phone; userdata wiped). Before: locked, green,
+  sys.oem_unlock_allowed=1.
+- Matches the port: CPU part 0x805 x4 + 0x804 x4; MemTotal 5596604 kB
+  (6 GB); `wm size` 1080x2280; input `fts` X 0..1079 Y 0..2279;
+  `qpnp_pon` + `gpio-keys`. /sys/firmware/fdt needs root (not read yet).
+
+## Stock images (in backup/, not in git)
+- backup/factory/flame-tp1a.221005.002.b2-factory-38e4f49a.zip, SHA-256
+  38e4f49a8f72a8f9522f86874187de47add539372fa8c951d11ebde4f9c21103
+  (matches developers.google.com/android/images). Restore: its flash-all.sh.
+- backup/boot.img from it, SHA-256
+  b7a276710f3b3cae23d401c5915a5965238d04e2740406ef11586978badb5625.
+- dtb/boot_unpacked/header.txt: header v2, page 4096, kernel 0x8000,
+  ramdisk 0x1000000, tags 0x100, dtb 0x1f00000, os 13.0.0 / 2022-10
+  (shim/build.sh reads these). dtb section 1048284 bytes (first DTB
+  525221 bytes; more than one DTB). Kernel LZ4, ramdisk gzip.
 
 # iOS 16 on sweet (Redmi Note 10 Pro, SM7150) - working notes
 

@@ -2,7 +2,7 @@
 
 [ios-sweet](https://github.com/dipa-studio/ios-sweet)（Redmi Note 10 Pro で iOS 16.7.16 を起動するプロジェクト）を Google Pixel 4（`flame`、Snapdragon 855 / SM8150）向けに移植したブランチです。
 
-> **状態: 実機では未テストです。** Pixel 4 固有の値は Google 公開のカーネルソース（`android-msm-coral-4.14-android13`）と sm8150-mainline から取っています。実機の値で確認するまで、ここにある値はすべて推定です。初めて起動する前に必ず `tools/flame-check.py` を通してください。
+> **状態: 実機では未テストです。** 2026-10-21 時点で、手元の Pixel 4（G020N）のブートローダーはアンロック済みです。CPU、RAM、画面、タッチ、ボタンは adb で確認し、移植の前提と一致しました。 Pixel 4 固有の値は Google 公開のカーネルソース（`android-msm-coral-4.14-android13`）と sm8150-mainline から取っています。実機の値で確認するまで、ここにある値はすべて推定です。初めて起動する前に必ず `tools/flame-check.py` を通してください。
 
 ## 何を変えたか
 
@@ -43,6 +43,8 @@ mkdir -p backup dtb
 cp ~/Downloads/boot.img backup/boot.img
 python3 tools/unpack_bootv2.py backup/boot.img dtb/boot_unpacked   # header.txt に os_version / patch level
 ```
+
+**取得済み（2026-10-21）:** `backup/factory/` に TP1A.221005.002.B2 のファクトリーイメージ（SHA-256 は公式ページの値と一致）、`backup/boot.img` とその展開結果が `dtb/boot_unpacked/` にあります。ヘッダーは v2、ページサイズ 4096、各オフセットは `shim/build.sh` の想定どおりで、OS は 13.0.0 / 2022-10 です。
 
 戻すときはこのファクトリーイメージの `flash-all.sh` を使います。
 

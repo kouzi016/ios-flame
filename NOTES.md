@@ -58,6 +58,15 @@
   tools/flame-check.py now walk adjacent banks. All other checks OK (splash
   0x9c400000, panel 1080x2280, GICD, UFS, PS_HOLD, IMEM, touch on SPI SE4).
   The new RAM base has not been booted on hardware.
+- Observed (photo, shim built with -DFLAME_MDP_KICK=0, no payload): full red
+  console, readable. `MDP AR pp0=0 pp1=0, flush=0 kicked=0`: ABL leaves
+  autorefresh off and the screen works anyway; the noise came from the
+  autorefresh kick in mdp.c (default is now no kick). DDR lines match the
+  dump. UFS (read-only probe) works first try: ver 0x300, cap 0x1587031F
+  (64AS set), LUN0 last LBA 0xEDEFFF, 4096-byte blocks, GPT `EFI PART` 15
+  entries; boot_a lba 0x2208, boot_b 0x6208, modem_a 0xA208, modem_b
+  0x10208, super 0x18000 (0x2458 MiB), userdata 0x25E000 (0xC80F MiB, fs
+  "other"). Ramdisk (empty cpio) at 0x84700000. FLAME.md step 3-1 passed.
 - Not done: kernel CI build, IPSW, root image, touch driver, any userdata write.
 
 # iOS 16 on sweet (Redmi Note 10 Pro, SM7150) - working notes

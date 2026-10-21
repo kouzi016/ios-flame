@@ -5,12 +5,15 @@
  * simple-framebuffer on this buffer, which suggests ABL leaves autorefresh
  * running; this only steps in when it finds it off.
  *
- * Build with -DFLAME_MDP_KICK=0 to only read the registers.
+ * Measured on the Pixel 4 (2026-10-21): ABL leaves autorefresh OFF
+ * (pp0 = pp1 = flush = 0) and the panel still shows the shim's console, but
+ * with the kick below the screen filled with noise. So the default is to
+ * only read the registers; build with -DFLAME_MDP_KICK=1 to force the kick.
  */
 #include "mdp.h"
 
 #ifndef FLAME_MDP_KICK
-#define FLAME_MDP_KICK		1
+#define FLAME_MDP_KICK		0
 #endif
 
 #define MDP_CTL0		0x0ae02000UL

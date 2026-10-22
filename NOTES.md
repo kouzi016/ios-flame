@@ -79,7 +79,28 @@
   (mount(9)..mount(16)...). That is expected: userdata still holds Android,
   not an HFS+ iOS root. Not seen yet: the early UFS lines at the top of the
   log (scrolled off). Bottom edge shows colored bars (unexplained).
-- Not done: IPSW, root image, touch driver, any userdata write.
+- IOS USERLAND RUNS ON THE PIXEL 4 (2026-10-22, photos). Root image built
+  in a lima Ubuntu VM (`ios-root`, mkiosroot.sh + sweet-root-tweaks.py from
+  the iPhone10,3 20H392 IPSW; 12 GiB of 16 GiB), flashed to userdata (user
+  authorised the write in chat). First boot with the full root: root mounted
+  (`iOSRoot`), launchd, keybagd fatal `kb_load` loop (systembag.kb data sat in
+  the part of userdata that had not been written). After the complete write:
+  backboardd and SpringBoard run, the kernel's `SMP ... sample N` stack
+  sampler prints, and bluetoothd / fairplayd / xpcproxy relaunch in a loop (no
+  hardware drivers). cpus=4 works (launchd at ~56 s vs ~80 s with cpus=1).
+  Console text still covers the screen without `sweetfb_noconsole=1`.
+- FLASHING LESSON (root cause found): the "hang at the last chunk" of
+  `fastboot flash userdata` was NOT a hang. img2simg turns every zero block
+  into a FILL chunk and Pixel 4's bootloader writes those zeros for real
+  (~3-6 MB/s). The 4.3 GiB of free space at the end of the volume sat in the
+  last piece, so the last piece took 12+ min; killing it after 15 min left
+  the tail unwritten. Fix: `tools/hfs-sparse.py ROOT.img OUT.simg` skips
+  unallocated blocks (checked against the HFS+ allocation bitmap): the tail
+  went from many minutes to 9 s. Also: a FILL padding chunk does not make a
+  separate fastboot piece (16 bytes in the file), and USB dropped once
+  (`usb_read failed`), so re-enter fastboot after any kill/hang. Use
+  `-S 128M`, watch the chunk number, not the text of the last log line.
+- Not done: touch driver, buttons (sweetkeys=0), GPU, Wi-Fi/BT/audio.
 
 # iOS 16 on sweet (Redmi Note 10 Pro, SM7150) - working notes
 

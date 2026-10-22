@@ -90,6 +90,10 @@ python3 tools/flame-check.py dumps/<日時>/live.dts
 3. **iOS ルートを書き込む**: README の手順 2 と 4 で userdata に書き込み、`ufsrw=1 rootrw=1` を足して起動します。**その前に手順 2 の GPT バックアップがあるか必ず確認してください。** ios-topaz では UFS ドライバが LUN0 の GPT を壊した事例があります。
 4. 起動できたら `sweetkeys=0` を外してボタンを試し、`cpus=4`（A55×4）に上げます。
 
+## 書き込みの注意（実機で判明）
+
+`img2simg` のイメージをそのまま `fastboot flash userdata` すると、空き領域のゼロ埋め（FILL）も実際に書き込まれ、最後のチャンクが 12 分以上かかって「固まった」ように見えます。`tools/hfs-sparse.py ios16-root.img out.simg` で空き領域を飛ばしたイメージを作ってから書き込んでください。途中で止めた場合は、必ず fastboot を入れ直してから書き直します。
+
 ## 未実装・次の作業
 
 - **タッチ（FTM5 / SPI）**: 新しいドライバが必要です。必要な情報は揃っています。

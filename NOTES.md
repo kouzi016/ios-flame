@@ -100,6 +100,20 @@
   separate fastboot piece (16 bytes in the file), and USB dropped once
   (`usb_read failed`), so re-enter fastboot after any kill/hang. Use
   `-S 128M`, watch the chunk number, not the text of the last log line.
+- Last test (2026-10-22 11:53, user gave up ~12:03): boot with
+  `cpus=4 ... sweetfb_noconsole=1 sweetfb_hz=30` (shim-ios-gui.img): the Apple
+  logo appeared and stayed for 10+ minutes, no lock screen. NOT diagnosed.
+  Candidates (all unverified): the CPU-only render is slower than on sweet;
+  the command-mode panel needs a refresh that the sweet present path
+  (patch 0056 throttled copy into the ABL framebuffer) does not give on
+  flame; SpringBoard/backboardd crash-looping (the previous run with the
+  console on showed both processes alive, but no sign of a drawn lock
+  screen). Next step if resumed: boot with the console on (drop
+  sweetfb_noconsole) and read the `CRASH ...` / `SWEET FB: N swaps` lines;
+  `SWEET FB` counts the frames that were presented.
+- State of the phone after this: userdata holds the iOS root, so Android
+  does not boot. To restore: `fastboot -w` or the factory flash-all.sh
+  (not tried).
 - Not done: touch driver, buttons (sweetkeys=0), GPU, Wi-Fi/BT/audio.
 
 # iOS 16 on sweet (Redmi Note 10 Pro, SM7150) - working notes
